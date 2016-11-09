@@ -3,46 +3,13 @@
 
 const request = require('request');
 const zlib = require('zlib');
-
-const rightpad = require('right-pad');
-const charm = require('charm')(process);
-
-function perc(n) {
-  return (Math.round(n*10)/10) + '%';
-}
-
-function spaceTime(n) {
-  let out = '';
-  for(let i = 0; i < n; i++) {
-    out += ' ';
-  }
-  return out;
-}
-
-function graphSplit(text, ns, sum) {
-  const len = text.length;
-  const widths = ns.map(n => Math.round((n / sum) * len));
-
-  var x = 0;
-  for (let i = 0; i < widths.length; i++) { x += widths[i]; }
-  widths[0] += len - x;
-
-  var index = 0;
-  var results = [];
-  for (let i = 0; i < widths.length; i++) {
-    const limit = index + widths[i];
-    results.push(text.substring(index, limit));
-    index = limit;
-  }
-  return results;
-}
-
-const dataRegexp = /race\.stateData\s*=\s*([^;]+)/g;
+const chalk = require('chalk');
+const cheerio = require('cheerio')
 
 const stream = request({
   method: 'GET',
   headers: {'accept-encoding': 'gzip'},
-  uri: 'http://projects.fivethirtyeight.com/2016-election-forecast/',
+  uri: 'http://www.nytimes.com/elections/results/president',
 }).pipe(zlib.createGunzip());
 
 let html = '';
@@ -51,48 +18,14 @@ stream.on('data', function(chunk) {
   html += chunk;
 });
 
-function printGraph(width, latest, model, metric) {
-  const h = latest.D.models[model][metric];
-  const t = latest.R.models[model][metric];
-  const j = latest.L.models[model][metric];
-
-  const modelLabel = rightpad(model + ':' + metric, 14, ' ');
-  const f = function (name, n) { return rightpad(name + ': ' + perc(n), 14); };
-  const prefix = ' ' + modelLabel + '    ';
-  const sep = '    ';
-  const label = prefix + f('Hillary', h) + sep + f('Trump', t) + sep + f('Johnson', j);
-  const graph = rightpad(label, width, ' ');
-
-  const blue = metric === 'winprob' ? 'blue' : 17;
-  const red = metric === 'winprob' ? 'red' : 52;
-  const yellow = metric === 'winprob' ? 'yellow' : 136;
-
-  const graphParts = graphSplit(graph, [h, t, j], h + t + j);
-  charm.foreground('white');
-  charm.background(blue).write(graphParts[0]);
-  charm.background(red).write(graphParts[1]);
-  charm.background(yellow).write(graphParts[2]);
-  charm.display('reset');
-}
-
 stream.on('end', function() {
 
   const width = process.stdout.columns;
-  const data = JSON.parse(dataRegexp.exec(html)[0].replace('race.stateData = ', ''));
-  const latest = data.forecasts.latest;
+  let $ = cheerio.load(html);
+  let clinton = $('.eln-democrat.eln-group').children()[0].children[0].data;
+  let trump = $('.eln-republican.eln-group').children()[0].children[0].data
+  console.log(`Clinton: ${chalk.blue(clinton)}`);
+  console.log(`Trump: ${chalk.red(trump)}`);
 
-  const display = function (model, suffix) {
-    charm.display('reset');
-    printGraph(width, latest, model, 'forecast');
-    process.stdout.write('\n');
-    charm.display('bright');
-    printGraph(width, latest, model, 'winprob');
-    process.stdout.write(suffix);
-  }
-
-  display('now', '\n\n');
-  display('polls', '\n\n');
-  display('plus', '\n');
-  charm.display('reset');
   process.exit();
 });
