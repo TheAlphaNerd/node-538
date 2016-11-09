@@ -1,6 +1,6 @@
 {
   "name": "election-results",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Get the latest election results from the nyt",
   "main": "index.js",
   "repository": {
