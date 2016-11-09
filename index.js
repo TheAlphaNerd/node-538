@@ -24,6 +24,14 @@ stream.on('end', function() {
   let $ = cheerio.load(html);
   let clinton = $('.eln-democrat.eln-group').children()[0].children[0].data;
   let trump = $('.eln-republican.eln-group').children()[0].children[0].data
+  if (clinton >= 270) {
+    console.log(`${chalk.blue('Congratulations')} President Clinton`);
+    process.exit();
+  }
+  else if (trump >= 270) {
+    console.log(`${chalk.red('Congratulations')} President Trump`);
+    process.exit();
+  }
   console.log(`Clinton: ${chalk.blue(clinton)}`);
   console.log(`Trump: ${chalk.red(trump)}`);
 
